@@ -16,3 +16,7 @@ The flow of the features are listed below:
 5. Special Items Breakout
 6. Standard & Poor's Core Earnings Data
 7. Industry-Specific Data
+
+# /Project.ipynb
+
+This is the notebook for feature select.
