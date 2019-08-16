@@ -1,2 +1,2 @@
 # creditrating-featureselection
-This is the repository for a summer research project at Stevens Hanlon Financial Systems Lab.
+This is the repository for a summer research project completed at Stevens Hanlon Financial Systems Lab in 2019.
