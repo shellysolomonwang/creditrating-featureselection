@@ -20,3 +20,7 @@ The flow of the features are listed below:
 # /Project.ipynb
 
 This is the notebook for feature select.
+
+# /function.py
+
+This is the data cleaning and reshape function to get the 3D arrays.
