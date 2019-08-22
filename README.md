@@ -1,3 +1,9 @@
+# Usage:
+* pip install all needed package and simply run Training.py, all result will go to your result fold.
+
+# Working Processes:
+* manupilate the image structure to see if different images have significant difference in accuarcy.
+
 # creditrating-featureselection
 This is the repository for a summer research project completed at Stevens Hanlon Financial Systems Lab in 2019.
 
