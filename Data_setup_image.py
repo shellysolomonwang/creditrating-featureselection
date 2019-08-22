@@ -1,21 +1,44 @@
-
-import pandas as pd
+import os
 import numpy as np
-df_consumer = pd.read_excel('Data/Consumer.xlsx')
-df_financial = pd.read_excel('Data/Financial.xlsx')
-df_healthcare = pd.read_excel('Data/Healthcare.xlsx')
-df_industry = pd.read_excel('Data/Industry.xlsx')
-df_it = pd.read_excel('Data/IT.xlsx')
+import random
+import sys
+import pandas as pd
+from sklearn import preprocessing
+from keras.utils import to_categorical
+from sklearn.model_selection import train_test_split
+
+def ratings_to_num(array): # switch the rating to number
+    np.place(array, array=='AAA', 0)
+    np.place(array, array=='AA+', 1)
+    np.place(array, array=='AA', 2)
+    np.place(array, array=='AA-', 3)
+    np.place(array, array=='A+', 4)
+    np.place(array, array=='A', 5)
+    np.place(array, array=='A-', 6)
+    np.place(array, array=='BBB+', 7)
+    np.place(array, array=='BBB', 8)
+    np.place(array, array=='BBB-', 9)
+    np.place(array, array=='BB+', 10)
+    np.place(array, array=='BB', 11)
+    np.place(array, array=='BB', 12)
+    np.place(array, array=='BB-', 13)
+    np.place(array, array=='B+', 14)
+    np.place(array, array=='B', 15)
+    np.place(array, array=='B-', 16)
+    np.place(array, array=='CCC+', 17)
+    np.place(array, array=='CCC', 18)
+    np.place(array, array=='CCC-', 19)
+    np.place(array, array=='CC', 20)
+    np.place(array, array=='C', 21)
+    np.place(array, array=='D', 22)
+    np.place(array, array=='SD', 23)
+    np.place(array, array=='N.M.', 24)
+    return array
 
 
-
-def myfunc(df, y):
-    """
-    input: df - the original dataframe; y - the dimension of y axe of the 3D array
-    output: a 3D array with the dimension of (obs, y, 300/y)
-    """
+def data_clean_image(sector, tyear, MASK = True, shuffle = False):
     info = [
-        'Global Company Key',
+         'Global Company Key',
          'Data Date',
          'Fiscal Year',
          'Fiscal Quarter',
@@ -31,7 +54,7 @@ def myfunc(df, y):
          'Active/Inactive Status Marker'
     ]
     sequence = [
-         'Assets - Total',
+        'Assets - Total',
         'Current Assets - Total',
         'Cash and Short-Term Investments',
         'Cash',
@@ -65,12 +88,6 @@ def myfunc(df, y):
         'Intangible Assets - Total',
         'Other Intangibles',
         'Goodwill (net)',
-
-
-
-
-
-
         'Other Long-term Assets',
         'Other Assets - Utility',
         'Deferred Tax Asset - Long Term',
@@ -398,36 +415,110 @@ def myfunc(df, y):
         'Order backlog',
         'Interest Accrued',
     ]
-    df = df[info+sequence] # rearrange the cols
+    data = pd.read_excel('./SectorData/'+ sector + '.xlsx')
+    #print ratings.head()
+
+    #READ DATA
+    ratings = pd.read_excel('./SectorData/'+ sector + 'Rating.xlsx')
+
+    data = data[info+sequence] # rearrange the cols
     
-    empty_perc = df.isnull().sum() / ( df.shape[0])
-    empty_perc_1 = empty_perc[empty_perc == 1]
-    df = df.drop(columns = empty_perc_1.index.tolist()).fillna(0) #remove 100% empty cols
+    #data.dropna(how = 'all', axis =1, inplace = True)
+    #data.dropna(how = 'any', axis =1, thresh = data.shape[0] * 0.05, inplace = True)
+    data.fillna(0, inplace = True)
+
+    if data.shape[1] < 360 + len(info):
+        addlist = [str(i) for i in range(360 + len(info) - data.shape[1])]
+        data = data.reindex(columns= (data.columns.tolist()+addlist), fill_value=0)
     
-    df = df.drop(columns = info) #drop info cols, e.g. company name & dat, etc
+
+    features_col = data.columns.tolist()
+    #print (data.shape)
     
-    # adding empty cols to the end of the df to reach 300 numerical cols
-    if df.shape[1] < 300:
-        addlist = [str(i) for i in range(300 - df.shape[1])]
-        df = df.reindex(columns= (df.columns.tolist()+addlist), fill_value=0)
-    df = df.values
+
+    matched=pd.merge(data,ratings, how='inner', on=['Data Date','Global Company Key']) #matched the ratings and the date 
+    #print ('matched shape:', matched.shape)
+
+    matched['Data Date'] = matched['Data Date'].astype('str')
+    #matched.to_csv("match.csv",index=False,sep=',')
+
+
+    matched1 = matched.dropna(subset=['S&P Domestic Long Term Issuer Credit Rating'])
+
+    matched1.index = range(matched1.shape[0])
+
+
+
+    #matched1.to_csv("match1.csv",index=False,sep=',')
+
+    data = matched1[features_col[14:]]   #extract the features part
+    mask = data.isnull()        #mark those null part as mask
+    data.fillna(0, inplace=True)    #make the feature no Null
+
+    ratings = matched1[['S&P Domestic Long Term Issuer Credit Rating']]  #get the ratings
+
+    #NORMALIZING
+    x = data.values #returns a numpy array
+    min_max_scaler = preprocessing.MinMaxScaler()
+    x_scaled = min_max_scaler.fit_transform(x)
+    df = pd.DataFrame(x_scaled, index = data.index, columns = data.columns)
+    #print (df)
+
+    ratings_np = ratings.values
+    data_np = df.values
+    mask_np =  mask.values
+
+
+    labels = ratings_to_num(ratings_np)
+
+    # MASKS to 0 and 1
+    mask_np=np.logical_not(mask_np)
+    mask_np=mask_np.astype(float)
+
+
+    labels=labels.astype(int)
+    data_np=data_np.astype(float)
+
+    if MASK:
+        
+        features = np.concatenate((data_np,mask_np),1) #combine mask and data
+    else:
+        
+        features = data_np
+
+    y = 30
+    #Features = pd.DataFrame(features, columns = )
+    features = np.reshape(features, (features.shape[0], y, int(360/y)))
     
-    array = np.reshape(df, (df.shape[0], y, int(300/y)))
+    Ratings =  pd.DataFrame(to_categorical(ratings))
+
+    if shuffle:
+        train_x, test_x, train_y, test_y = train_test_split(features, Ratings, test_size=0.06, random_state=42)
+        #test_year=(np.random.random(len(matched1['Data Date'])) >0.8)
+        print ('training: ', train_x.shape, train_y.shape)
+        print ('Test size: ', test_x.shape, test_y.shape)
+        return train_x, train_y.values, test_x, test_y.values
+    else:
+        test_year=matched1['Data Date'].map(lambda x: int(x[:4])== tyear)
+
+    #
+
+        train_x = features[~test_year]
+        train_y = Ratings[~test_year]
+        test_x = features[test_year]
+        test_y = Ratings[test_year]
+
+        print ('training: ', train_x.shape, train_y.shape)
+        print ('Test size: ', test_x.shape, test_y.shape)
+        
+
+        return train_x, train_y.values, test_x, test_y.values
     
-    return array
 
 
 
-
-
-# an example of using the function
-if __name__ == '__main__':
-	images = myfunc(df_industry, 30)
-	print (images.shape)
-
-
-
-
-
+if __name__ == "__main__":
+    train_x, train_y, test_x, test_y = data_clean_image('Energy', tyear=2015, MASK = False, shuffle = False)
+    print (train_y)
 
 
