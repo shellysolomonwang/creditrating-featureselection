@@ -1,5 +1,6 @@
 # Usage:
 * pip install all needed package and simply run Training.py, all result will go to your result fold.
+* Be careful that you need change ecpoc num in training.py, otherwise your old result file will be covered.
 
 # Working Processes:
 * manupilate the image structure to see if different images have significant difference in accuarcy.
